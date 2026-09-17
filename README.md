@@ -1,4 +1,6 @@
-# Getting Started with Create React App
+# restuarantFinder
+Application that lists nearby restaurants, categorizes them and can choose one for you. Especially helpful for when your girlfriend does not care where you eat but says no to everything.
+311# Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
