@@ -1,72 +1,148 @@
 # restuarantFinder
-Application that lists nearby restaurants, categorizes them and can choose one for you. Especially helpful for when your girlfriend does not care where you eat but says no to everything.
-311# Getting Started with Create React App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+An application that lists nearby restaurants, categorizes them, and can choose one for you.
+Especially helpful for when your girlfriend does not care where you eat but says no to everything.
 
-## Available Scripts
+## Status
 
-In the project directory, you can run:
+| Part | State |
+| --- | --- |
+| Backend (FastAPI) | Working — two endpoints against the Foursquare Places API |
+| Frontend (React) | Scaffolded only — still the Create React App starter page. Design and build plan live in [`docs/`](docs/superpowers) |
 
-### `npm start`
+## Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Backend:** Python, [FastAPI](https://fastapi.tiangolo.com/), `httpx`, [Foursquare Places API](https://location.foursquare.com/places/docs/)
+- **Frontend:** React 19 via Create React App (`react-scripts` 5.0.1)
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Repository layout
 
-### `npm test`
+```
+backend/
+  main.py     FastAPI app — endpoints, Foursquare client, response cache
+  .env        FOURSQUARE_API_KEY (gitignored)
+frontend/
+  src/        React app (CRA starter at present)
+docs/
+  superpowers/specs/    frontend design doc
+  superpowers/plans/    frontend implementation plan
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Getting started
 
-### `npm run build`
+### Prerequisites
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- Python 3.10+
+- Node.js 18+
+- A Foursquare Places API key — create one in the [Foursquare developer console](https://foursquare.com/developers/home)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Backend
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+cd backend
 
-### `npm run eject`
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+pip install fastapi uvicorn httpx python-dotenv
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Put your API key in `backend/.env`:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```
+FOURSQUARE_API_KEY=your_key_here
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Run the dev server:
 
-## Learn More
+```bash
+uvicorn main:app --reload
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+The API is then on `http://localhost:8000`, with interactive docs at
+`http://localhost:8000/docs`.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### Frontend
 
-### Code Splitting
+```bash
+cd frontend
+npm install
+npm start
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+Runs on `http://localhost:3000`.
 
-### Analyzing the Bundle Size
+## API
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+Both endpoints require `lat` and `lon`. The optional `category` narrows the search to
+one of: `fast_food`, `fancy`, `cafe`, `bar`, `pizza`. An unrecognized category returns
+`400`.
 
-### Making a Progressive Web App
+### `GET /restaurants`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+Lists nearby restaurants within a 3 km radius (up to 50 results).
 
-### Advanced Configuration
+```bash
+curl "http://localhost:8000/restaurants?lat=40.7128&lon=-74.0060&category=pizza"
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+```json
+[
+  {
+    "name": "Joe's Pizza",
+    "address": "7 Carmine St, New York, NY 10014",
+    "categories": ["Pizzeria"],
+    "open_now": true,
+    "hours": "Open until 4:00 AM"
+  }
+]
+```
 
-### Deployment
+### `GET /restaurants/random`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+Picks one nearby restaurant at random — the "just decide for me" endpoint. Returns
+`404` when nothing is found nearby.
 
-### `npm run build` fails to minify
+```bash
+curl "http://localhost:8000/restaurants/random?lat=40.7128&lon=-74.0060"
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```json
+{
+  "name": "Joe's Pizza",
+  "address": "7 Carmine St, New York, NY 10014",
+  "category": "all"
+}
+```
+
+### Caching
+
+Responses are cached in memory for 5 minutes, keyed on location (rounded to three
+decimal places), category, and radius. The cache is per-process, so it resets on
+restart.
+
+## Available frontend scripts
+
+Standard Create React App scripts, run from `frontend/`:
+
+| Command | Purpose |
+| --- | --- |
+| `npm start` | Dev server with hot reload on port 3000 |
+| `npm test` | Test runner in watch mode |
+| `npm run build` | Production build into `build/` |
+
+See the [Create React App docs](https://facebook.github.io/create-react-app/docs/getting-started)
+for the full reference.
+
+## Roadmap
+
+The frontend design is specified in
+[`docs/superpowers/specs/2026-09-17-restaurant-finder-frontend-design.md`](docs/superpowers/specs/2026-09-17-restaurant-finder-frontend-design.md)
+and covers:
+
+- Browser geolocation with a manual fallback
+- Category filter chips
+- A Google-Maps-style restaurant list
+- A "Surprise me" random pick with a case-opening reel animation
+
+Built against mock data first, then wired to the endpoints above.
