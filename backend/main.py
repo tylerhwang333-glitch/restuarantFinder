@@ -9,9 +9,24 @@ import os
 
 app = FastAPI(title="Nearby Restaurant Finder")
 
+# Origins allowed to call the API. Local dev plus the deployed Vercel frontend.
+# Override with a comma-separated ALLOWED_ORIGINS to add preview/other domains.
+_default_origins = (
+    "http://localhost:3000",
+    "https://restuarant-finder.vercel.app",
+)
+ALLOWED_ORIGINS = [
+    o.strip()
+    for o in os.getenv("ALLOWED_ORIGINS", ",".join(_default_origins)).split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=ALLOWED_ORIGINS,
+    # Vercel preview deployments get a per-branch hostname, so also allow any
+    # *.vercel.app subdomain via regex.
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_methods=["GET"],
     allow_headers=["*"],
 )
